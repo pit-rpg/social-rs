@@ -1,23 +1,22 @@
 use actix_web::{
+    cookie::{time, Cookie},
+    dev::{Service, ServiceRequest, ServiceResponse},
+    get,
     middleware,
+    post,
     web,
     App,
-    HttpRequest,
-    HttpServer,
-    HttpResponse,
-    Responder,
-    post,
-    get,
     Error,
+    HttpRequest,
+    HttpResponse,
+    HttpServer,
+    Responder,
     Result,
-    cookie::{Cookie, time},
-    dev::{Service, ServiceResponse, ServiceRequest},
-
-    // dev::Service as _,
 };
 
 mod db;
 mod graphql;
+// mod session;
 // use actix_session::storage::SessionStore;
 
 // async fn index(req: HttpRequest) -> &'static str {
@@ -34,28 +33,26 @@ mod graphql;
 //     format!("{:?}\n{:?}", oldId, newId)
 // }
 
-async fn index(session: Session) -> actix_web::Result<&'static str, Error> {
-    // access the session state
-    if let Some(count) = session.get::<i32>("counter")? {
-        println!("SESSION value: {}", count);
-        // modify the session state
-        session.insert("counter", count + 1)?;
-    } else {
-        session.insert("counter", 1)?;
-    }
+// async fn index(session: Session) -> actix_web::Result<&'static str, Error> {
+//     // access the session state
+//     if let Some(count) = session.get::<i32>("counter")? {
+//         println!("SESSION value: {}", count);
+//         // modify the session state
+//         session.insert("counter", count + 1)?;
+//     } else {
+//         session.insert("counter", 1)?;
+//     }
 
-    Ok("Welcome!")
-}
-
+//     Ok("Welcome!")
+// }
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     let redis_connection_string = "127.0.0.1:6379";
     // let secret_key = Key::from(&[12;85]);
-    let secret_key = Key::generate();
+    // let secret_key = Key::generate();
     std::env::set_var("RUST_LOG", "actix_web=info");
     env_logger::init();
-
 
     let (_client_mongo, db_mongo) = db::connect_mongo().await;
     let pool_redis_connection = db::connect_redis().await;
@@ -67,14 +64,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(middleware::Logger::default())
             .app_data(web::Data::new(db_mongo.clone()))
             .app_data(web::Data::new(pool_redis_connection.clone()))
-            .wrap(
-                SessionMiddleware::new(
-                    RedisActorSessionStore::new(redis_connection_string),
-                    secret_key.clone()
-                )
-            )
             .wrap_fn(|req, srv| {
-
                 let fut = srv.call(req);
                 async {
                     let mut res = fut.await?;
@@ -97,11 +87,11 @@ async fn main() -> std::io::Result<()> {
                         http_response.add_cookie(&cookie);
                     }
 
-                        // .insert(CONTENT_TYPE, HeaderValue::from_static("text/plain"));
+                    // .insert(CONTENT_TYPE, HeaderValue::from_static("text/plain"));
                     Ok(res)
                 }
             })
-            .service(echo)
+            // .service(echo)
             // .service(web::resource("/index.html").to(|| async { "Hello world!" }))
             .app_data(web::Data::new(schema.clone()))
             .service(web::resource("/").to(graphql::index))
@@ -109,7 +99,7 @@ async fn main() -> std::io::Result<()> {
                 web::resource("/ws")
                     .guard(actix_web::guard::Get())
                     .guard(actix_web::guard::Header("upgrade", "websocket"))
-                    .to(graphql::index_ws)
+                    .to(graphql::index_ws),
             )
             .service(web::resource("/pg").to(graphql::gql_playground))
     })

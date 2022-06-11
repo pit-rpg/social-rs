@@ -9,7 +9,7 @@ use async_graphql::{
     http::{playground_source, GraphQLPlaygroundConfig},
     Data, Schema, Context, Object, Subscription
 };
-use actix_session::{Session, SessionMiddleware, storage::RedisActorSessionStore};
+// use actix_session::{Session, SessionMiddleware, storage::RedisActorSessionStore};
 
 use std::time::Duration;
 use std::sync::{Mutex, Arc, MutexGuard, PoisonError};
@@ -120,16 +120,16 @@ impl SubscriptionRoot {
 // }
 
 
-pub struct SessionWarper (Arc<Mutex<Box<Session>>>);
-impl SessionWarper {
-    fn lock(&self) -> std::result::Result<MutexGuard<Box<Session>>, PoisonError<MutexGuard<Box<Session>>>>{
-        self.0.lock()
-    }
+// pub struct SessionWarper (Arc<Mutex<Box<Session>>>);
+// impl SessionWarper {
+//     fn lock(&self) -> std::result::Result<MutexGuard<Box<Session>>, PoisonError<MutexGuard<Box<Session>>>>{
+//         self.0.lock()
+//     }
 
-    fn new(session : Session) -> Self {
-        SessionWarper(Arc::new(Mutex::new(Box::new(session))))
-    }
-}
+//     fn new(session : Session) -> Self {
+//         SessionWarper(Arc::new(Mutex::new(Box::new(session))))
+//     }
+// }
 
 
 
@@ -155,7 +155,7 @@ pub async fn index(
     schema: web::Data<TokenSchema>,
     req: HttpRequest,
     gql_request: GraphQLRequest,
-    session: Session,
+    // session: Session,
 ) -> GraphQLResponse {
 // ) -> GraphQLResponse {
     let request = gql_request.into_inner();
@@ -164,35 +164,36 @@ pub async fn index(
     // }
 
     let mut data = Data::default();
-    let mut session_data = SessionData::default();
+    // let mut session_data = SessionData::default();
 
-    session_data.user_id = session.get("user_id").unwrap();
+    // session_data.user_id = session.get("user_id").unwrap();
 
-    let gql_session = Arc::new(Mutex::new(session_data));
+    // let gql_session = Arc::new(Mutex::new(session_data));
 
-    {
+    // {
 
-        println!(">>>> 1: {:?}", gql_session);
+    //     println!(">>>> 1: {:?}", gql_session);
 
-        data.insert(gql_session.clone());
-    }
+        // data.insert(gql_session.clone());
+    // }
 
-    let res = schema.execute(
-        request.data(gql_session.clone())
-    ).await.into();
+    let res = schema.execute(request).await.into();
+    // let res = schema.execute(
+    //     request.data(gql_session.clone())
+    // ).await.into();
 
-    {
-        let data = gql_session.lock().unwrap();
+    // {
+    //     let data = gql_session.lock().unwrap();
 
-        if let Some(id) = &data.user_id {
-            session.insert("user_id", id).unwrap();
-        } else {
-            session.remove("user_id");
-        }
-        // let x = res.body();
-        println!(">>>> 2: {:?}", data);
+    //     // if let Some(id) = &data.user_id {
+    //     //     session.insert("user_id", id).unwrap();
+    //     // } else {
+    //     //     session.remove("user_id");
+    //     // }
+    //     // let x = res.body();
+    //     println!(">>>> 2: {:?}", data);
 
-    }
+    // }
 
     res
     // let host = req.uri().host();
@@ -220,14 +221,14 @@ pub async fn index(
 
 pub async fn index_ws(
     schema: web::Data<TokenSchema>,
-    session: Session,
+    // session: Session,
     req: HttpRequest,
     payload: web::Payload,
 ) -> Result<HttpResponse> {
     let mut data = Data::default();
     let mut session_data = SessionData::default();
 
-    session_data.user_id = session.get("user_id")?;
+    // session_data.user_id = session.get("user_id")?;
 
     let gql_session: GQL_Session = Arc::new(Mutex::new(session_data));
 

@@ -6,8 +6,9 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-actix-web = {version = "4.0.1", default-features = false, features = ["macros"]}
-actix-session = { version = "0.6",  default-features = false, features = ["redis-actor-session"] }
+actix-web = {version = "4.0.1", features = ["macros"]}
+actix-utils = "3"
+# actix-session = "0.6.2"
 
 redis = { version = "0.21", features = ["tokio-comp"] }
 mongodb = "2.2.1"
@@ -21,11 +22,14 @@ async-graphql = {version = "4.0.1", default-features = false }
 # async-graphql-actix-web = {version = "4.0.1", default-features = false }
 futures-util = "0.3.0"
 derive_more = "0.99.17"
-graphql-actix-web-lib = {path = "./graphql-actix-web-lib"}
+graphql-actix-web-lib = {path = "./lib/graphql-actix-web-lib"}
 async-stream = "0.3.0"
 futures-timer = "3.0.2"
+async-lock = "2.5.0"
+anyhow = "1"
+time = "0.3"
 
 [workspace]
 members = [
-    "graphql-actix-web-lib"
+    "lib/graphql-actix-web-lib"
 ]
