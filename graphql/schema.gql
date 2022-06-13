@@ -1,0 +1,56 @@
+
+
+enum Gender {
+	NONE
+	MALE
+	FEMALE
+	OTHER
+}
+
+
+input InputUserLogin {
+	nameUser: String!
+	password: String!
+}
+
+
+type MutationSession {
+	register(data: InputUserLogin!): OutputUser!
+	logIn(data: InputUserLogin!): OutputUser!
+	logOut: Boolean!
+	user: OutputUser!
+}
+
+type OutputUser {
+	id: String
+	nameUser: String
+	nameDisplay: String
+	gender: Gender
+	mail: String
+	age: Int
+	phone: String
+}
+
+type QuerySession {
+	user: OutputUser
+}
+
+type RootMutation {
+	session: MutationSession
+}
+
+type RootQuery {
+	session: QuerySession!
+}
+
+type RootSubscription {
+	values: Int!
+	interval(n: Int! = 1): Int!
+}
+
+
+schema {
+	query: RootQuery
+	mutation: RootMutation
+	subscription: RootSubscription
+}

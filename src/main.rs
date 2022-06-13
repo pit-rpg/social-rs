@@ -1,62 +1,28 @@
-use actix_web::{
-    cookie::{time, Cookie},
-    dev::{Service, ServiceRequest, ServiceResponse},
-    get,
-    middleware,
-    post,
-    web,
-    App,
-    Error,
-    HttpRequest,
-    HttpResponse,
-    HttpServer,
-    Responder,
-    Result,
-};
-
+#[macro_use]
+extern crate lazy_static;
+extern crate validator;
 mod db;
 mod graphql;
-// mod session;
-// use actix_session::storage::SessionStore;
-
-// async fn index(req: HttpRequest) -> &'static str {
-//     println!("REQ: {:?}", req);
-//     "Hello world!"
-// }
-
-// #[get("/echo")]
-// async fn echo(req_body: String, session: Session) -> impl Responder {
-//     let oldId = session.get::<String>("user_id").unwrap();
-//     session.insert("user_id", "some user_id").unwrap();
-//     let newId = session.get::<String>("user_id").unwrap();
-
-//     format!("{:?}\n{:?}", oldId, newId)
-// }
-
-// async fn index(session: Session) -> actix_web::Result<&'static str, Error> {
-//     // access the session state
-//     if let Some(count) = session.get::<i32>("counter")? {
-//         println!("SESSION value: {}", count);
-//         // modify the session state
-//         session.insert("counter", count + 1)?;
-//     } else {
-//         session.insert("counter", 1)?;
-//     }
-
-//     Ok("Welcome!")
-// }
+use actix_session::{storage::CookieSessionStore, SessionExt, SessionMiddleware};
+use actix_web::{cookie::Key, dev::Service, middleware, web, App, HttpServer};
+use mongodb::bson::Uuid;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    let redis_connection_string = "127.0.0.1:6379";
-    // let secret_key = Key::from(&[12;85]);
-    // let secret_key = Key::generate();
+    let secret_key = Key::from(&[
+        68, 7, 127, 34, 160, 144, 105, 241, 74, 45, 54, 104, 47, 64, 8, 61, 7, 116, 55, 186, 147,
+        17, 113, 147, 35, 246, 232, 62, 136, 121, 66, 167, 71, 87, 177, 97, 19, 10, 20, 104, 217,
+        202, 185, 153, 178, 52, 154, 96, 229, 15, 155, 202, 221, 38, 73, 154, 235, 9, 38, 219, 108,
+        208, 158, 71,
+    ]);
+
     std::env::set_var("RUST_LOG", "actix_web=info");
     env_logger::init();
 
-    let (_client_mongo, db_mongo) = db::connect_mongo().await;
-    let pool_redis_connection = db::connect_redis().await;
-    let schema = graphql::get_schema();
+    let (pool_redis_connection, _client_mongo, db_mongo) = db::connect::init(None).await;
+    let schema = graphql::schema::get_schema();
+
+    graphql::dump_schema_to_disk(&schema).await?;
 
     HttpServer::new(move || {
         App::new()
@@ -65,43 +31,34 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::new(db_mongo.clone()))
             .app_data(web::Data::new(pool_redis_connection.clone()))
             .wrap_fn(|req, srv| {
+                let session = req.get_session();
+
+                if session.get::<String>("session_uid").unwrap().is_none() {
+                    session
+                        .insert("session_uid", Uuid::default().to_string())
+                        .unwrap();
+                }
+
                 let fut = srv.call(req);
+
                 async {
-                    let mut res = fut.await?;
-                    let mut http_response = res.response_mut();
-
-                    let is_session_id = http_response
-                        .cookies()
-                        .find(|i| i.name() == "session_id")
-                        .is_some();
-
-                    if !is_session_id {
-                        let cookie = Cookie::build("name", "value")
-                            // .domain("www.rust-lang.org")
-                            .path("/")
-                            .secure(true)
-                            .http_only(true)
-                            .max_age(time::Duration::days(1))
-                            .finish();
-
-                        http_response.add_cookie(&cookie);
-                    }
-
-                    // .insert(CONTENT_TYPE, HeaderValue::from_static("text/plain"));
+                    let res = fut.await?;
                     Ok(res)
                 }
             })
-            // .service(echo)
-            // .service(web::resource("/index.html").to(|| async { "Hello world!" }))
+            .wrap(SessionMiddleware::new(
+                CookieSessionStore::default(),
+                secret_key.clone(),
+            ))
             .app_data(web::Data::new(schema.clone()))
-            .service(web::resource("/").to(graphql::index))
+            .service(web::resource("/").to(graphql::routes::index))
             .service(
                 web::resource("/ws")
                     .guard(actix_web::guard::Get())
                     .guard(actix_web::guard::Header("upgrade", "websocket"))
-                    .to(graphql::index_ws),
+                    .to(graphql::routes::index_ws),
             )
-            .service(web::resource("/pg").to(graphql::gql_playground))
+            .service(web::resource("/pg").to(graphql::routes::gql_playground))
     })
     .bind(("127.0.0.1", 3030))?
     .run()
