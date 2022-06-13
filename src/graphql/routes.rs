@@ -1,19 +1,15 @@
+use super::context::*;
+use super::schema::AppSchema;
+use crate::db::RedisPool;
 use actix_session::Session;
 use actix_web::{web, HttpRequest, HttpResponse, Result};
 use async_graphql::{
     http::{playground_source, GraphQLPlaygroundConfig},
     Data, Schema,
 };
-use mongodb::Database;
-
-use std::sync::{Arc, Mutex};
-
 use graphql_actix_web_lib;
 use graphql_actix_web_lib::{GraphQLRequest, GraphQLResponse, GraphQLSubscription};
-
-use super::context::*;
-use super::schema::AppSchema;
-use crate::db::RedisPool;
+use mongodb::Database;
 
 pub async fn gql_playground() -> HttpResponse {
     HttpResponse::Ok()
@@ -33,14 +29,11 @@ pub async fn index(
 ) -> Result<GraphQLResponse> {
     let request = gql_request.into_inner();
 
-    let session_data = ContextData::new(
+    let gql_context = ContextData::new(
         session.get("session_uid")?.unwrap(),
         session.get("user_id")?,
-    );
-
-    let gql_context = Arc::new(Mutex::new(session_data));
-
-    // let x: i32 = ;
+    )
+    .to_shared();
 
     let res = schema
         .execute(
@@ -80,8 +73,7 @@ pub async fn index_ws(
         session.get("user_id")?,
     );
 
-    let gql_context: GqlContext = Arc::new(Mutex::new(session_data));
-    data.insert(gql_context.clone());
+    data.insert(session_data.to_shared());
     data.insert(redis_pool.into_inner());
     data.insert(mongo_db.into_inner());
 

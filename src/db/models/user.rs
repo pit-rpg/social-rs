@@ -1,17 +1,10 @@
-use crate::db::{validations::validate_trimmed, CollectionUtils};
-use std::{result::Result};
-
-use serde::{Deserialize, Serialize};
-use validator::{Validate};
-
-use mongodb::{
-    bson::Uuid,
-    bson::{doc},
-    options::IndexOptions,
-    Collection, Database, IndexModel,
-};
-
+use crate::db::{validations::validate_trimmed, utils::CollectionUtils};
 use async_graphql::{Enum, InputObject, SimpleObject};
+use mongodb::{bson::doc, bson::Uuid, options::IndexOptions, Collection, Database, IndexModel, options::FindOptions};
+use serde::{Deserialize, Serialize};
+use std::result::Result;
+use validator::Validate;
+use futures::stream::{StreamExt, TryStreamExt};
 
 lazy_static! {
     static ref ARGON_2_CONF: argon2::Config<'static> = argon2::Config::default();
@@ -31,7 +24,7 @@ impl std::default::Default for Gender {
     }
 }
 
-pub struct User {}
+pub struct User;
 
 impl User {
     pub async fn create_indexes(db: &Database) {
@@ -106,6 +99,28 @@ impl User {
             .or(Err("cent find user"))?
             .ok_or("cent find user")
     }
+
+    pub async fn find_user(db: &Database, data: InputFindUser) -> Result<Vec<OutputUser>, &'static str> {
+        let options = FindOptions::builder()
+            .limit(data.limit)
+            .build();
+
+        let cursor = DBUser::to_collection(&db)
+            .find(doc! {"name_user": data.name_user}, Some(options))
+            .await
+            .or(Err("cent find user"))?;
+
+        let res = cursor
+            .map( |item| match item {
+                Ok(val) => {Ok(val.into())},
+                Err(_) => {Err("cent get user")},
+            })
+            .try_collect::<Vec<OutputUser>>()
+            .await
+            .or(Err("cent get users"))?;
+
+        Ok(res)
+    }
 }
 
 #[derive(InputObject)]
@@ -115,6 +130,15 @@ pub struct InputUserLogin {
 
     #[graphql(validator(min_length = 1, max_length = 256))]
     password: String,
+}
+
+#[derive(InputObject)]
+pub struct InputFindUser {
+    #[graphql(validator(min_length = 1, max_length = 128))]
+    name_user: String,
+
+    #[graphql(default = 10, validator(minimum = 1, maximum = 100))]
+    limit: i64,
 }
 
 #[derive(Debug, Serialize, Deserialize, Validate, Default, Clone)]
@@ -132,7 +156,6 @@ pub struct DBUser {
     password: String,
 
     // password_salt: Uuid,
-
     pub gender: Gender,
 
     #[validate(email)]
@@ -175,8 +198,6 @@ impl From<DBUser> for OutputUser {
         (&item).into()
     }
 }
-
-
 
 impl CollectionUtils<DBUser> for DBUser {
     fn to_collection(db: &Database) -> Collection<DBUser> {
