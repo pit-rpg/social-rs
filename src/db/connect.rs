@@ -1,4 +1,4 @@
-use super::{models::User, RedisPool};
+use super::{models::{DBUser, DBChat, DBChatMessage}, RedisPool};
 use deadpool::unmanaged::Pool;
 use mongodb::{options::ClientOptions, Client, Database};
 use num_cpus;
@@ -13,7 +13,9 @@ pub async fn init(redis_pull_size: Option<usize>) -> (RedisPool, Client, Databas
 }
 
 pub async fn create_indexes(db: &Database) {
-    User::create_indexes(db).await;
+    DBUser::create_indexes(db).await;
+    DBChat::create_indexes(db).await;
+    DBChatMessage::create_indexes(db).await;
 }
 
 pub async fn connect_mongo() -> (Client, Database) {
@@ -37,7 +39,7 @@ pub async fn connect_redis(pull_size: Option<usize>) -> RedisPool {
     let client = redis::Client::open("redis://127.0.0.1/").expect("Can't connect to Redis");
 
     let connections: Vec<_> = (0..items)
-        .map(|_| client.get_connection().unwrap())
+        .map(|_| client.get_connection().expect("Cen't connect to redis"))
         .collect();
 
     Pool::from(connections)

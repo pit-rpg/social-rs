@@ -1,4 +1,10 @@
 
+enum ChatType {
+	USER_PRIVATE
+	PRIVATE
+	GROUP
+}
+
 
 enum Gender {
 	NONE
@@ -8,17 +14,81 @@ enum Gender {
 }
 
 
+input InputFindUser {
+	nameUser: String!
+	limit: Int! = 10
+}
+
 input InputUserLogin {
 	nameUser: String!
 	password: String!
 }
 
 
-type MutationSession {
-	register(data: InputUserLogin!): OutputUser!
-	logIn(data: InputUserLogin!): OutputUser!
-	logOut: Boolean!
-	user: OutputUser!
+type OutputChat {
+	id: String
+	owner: String
+	users: [String!]
+	chatType: ChatType
+	name: String
+}
+
+type OutputChatConnection {
+	"""
+	Information to aid in pagination.
+	"""
+	pageInfo: PageInfo!
+	"""
+	A list of edges.
+	"""
+	edges: [OutputChatEdge!]!
+}
+
+"""
+An edge in a connection.
+"""
+type OutputChatEdge {
+	"""
+	A cursor for use in pagination
+	"""
+	cursor: String!
+	"""
+	The item at the end of the edge
+	"""
+	node: OutputChat!
+}
+
+type OutputChatMessage {
+	id: String
+	chat: String
+	user: String
+	edit: Int
+	message: String
+}
+
+type OutputChatMessageConnection {
+	"""
+	Information to aid in pagination.
+	"""
+	pageInfo: PageInfo!
+	"""
+	A list of edges.
+	"""
+	edges: [OutputChatMessageEdge!]!
+}
+
+"""
+An edge in a connection.
+"""
+type OutputChatMessageEdge {
+	"""
+	A cursor for use in pagination
+	"""
+	cursor: String!
+	"""
+	The item at the end of the edge
+	"""
+	node: OutputChatMessage!
 }
 
 type OutputUser {
@@ -31,16 +101,49 @@ type OutputUser {
 	phone: String
 }
 
-type QuerySession {
-	user: OutputUser
+"""
+Information about pagination in a connection
+"""
+type PageInfo {
+	"""
+	When paginating backwards, are there more items?
+	"""
+	hasPreviousPage: Boolean!
+	"""
+	When paginating forwards, are there more items?
+	"""
+	hasNextPage: Boolean!
+	"""
+	When paginating backwards, the cursor to continue.
+	"""
+	startCursor: String
+	"""
+	When paginating forwards, the cursor to continue.
+	"""
+	endCursor: String
 }
 
-type RootMutation {
-	session: MutationSession
+type QueryChat {
+	createUserPrivate: OutputChat
+	createPrivate(userId: String!): OutputChat
+	getChats(after: String, before: String, first: Int): OutputChatConnection!
+	getMessages(chat: String!, after: String, before: String, first: Int): OutputChatMessageConnection!
+	sendMessage(chat: String!, message: String!): OutputChatMessage
+	removeMessages(chat: String!, messages: [String!]!): Boolean
+	removeChat(chat: String!): Boolean
+}
+
+type QuerySession {
+	user: OutputUser
+	findUser(data: InputFindUser!): [OutputUser!]!
+	register(data: InputUserLogin!): OutputUser!
+	logIn(data: InputUserLogin!): OutputUser!
+	logOut: Boolean!
 }
 
 type RootQuery {
 	session: QuerySession!
+	chat: QueryChat!
 }
 
 type RootSubscription {
@@ -51,6 +154,5 @@ type RootSubscription {
 
 schema {
 	query: RootQuery
-	mutation: RootMutation
 	subscription: RootSubscription
 }

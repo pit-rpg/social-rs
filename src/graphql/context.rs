@@ -1,29 +1,23 @@
 use std::sync::{Arc, Mutex, MutexGuard};
-use mongodb::{bson::Uuid, Database};
-use async_graphql::{Context, Object, Result};
+use mongodb::{bson::oid::ObjectId};
+use async_graphql::{Result};
 
 #[derive(Clone, Debug, Default)]
 pub struct ContextData {
     pub user_id: Option<String>,
-    session_uid: String,
 }
 
 impl ContextData {
-    pub fn new(session_uid: String, user_id: Option<String>) -> Self {
+    pub fn new(user_id: Option<String>) -> Self {
         ContextData {
-            session_uid,
             user_id,
         }
     }
 
-    pub fn get_session_uid<'a>(&'a self) -> &'a str {
-        &self.session_uid
-    }
-
-    pub fn get_user_id(&self) -> Result<Option<Uuid>> {
+    pub fn get_user_id(&self) -> Result<Option<ObjectId>> {
         if self.user_id.is_none() {return Ok(None)}
 
-        let id = Uuid::parse_str(self.user_id.as_ref().unwrap()).or(Err("cent pars uuid"))?;
+        let id = ObjectId::parse_str(self.user_id.as_ref().unwrap()).or(Err("cent pars ObjectId"))?;
 
         Ok(Some(id))
     }

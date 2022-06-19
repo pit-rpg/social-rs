@@ -30,7 +30,6 @@ pub async fn index(
     let request = gql_request.into_inner();
 
     let gql_context = ContextData::new(
-        session.get("session_uid")?.unwrap(),
         session.get("user_id")?,
     )
     .to_shared();
@@ -69,7 +68,6 @@ pub async fn index_ws(
     let mut data = Data::default();
 
     let session_data = ContextData::new(
-        session.get("session_uid")?.unwrap(),
         session.get("user_id")?,
     );
 

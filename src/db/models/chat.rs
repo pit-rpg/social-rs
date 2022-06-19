@@ -1,69 +1,123 @@
-use crate::db::{validations::validate_trimmed, utils::{CollectionUtils, date_now}};
-use async_graphql::{Enum, InputObject, SimpleObject};
-use mongodb::{bson::doc, bson::Uuid, options::IndexOptions, Collection, Database, IndexModel, bson::Timestamp};
+use crate::db::{utils::{CollectionUtils, date_now}};
+use async_graphql::{Enum};
+use mongodb::{bson::doc, options::IndexOptions, Collection, Database, IndexModel, bson::{oid::ObjectId}};
 use serde::{Deserialize, Serialize};
-use std::result::Result;
 use validator::Validate;
-use std::time::{Duration, Instant, UNIX_EPOCH, SystemTime};
-use std::default::{Default};
 
-pub struct Chat;
+#[derive(Debug, Serialize, Deserialize, Validate, Clone)]
+pub struct DBChat {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "_id")]
+    pub id: Option<ObjectId>,
 
-impl Chat {
-    pub async fn create() {
-        unimplemented!()
-    }
+    pub owner: Option<ObjectId>,
 
-    pub async fn get_chats() {
-        unimplemented!()
-    }
+    pub users: Vec<ObjectId>,
+
+    pub chat_type: ChatType,
+
+    pub name: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Validate, Default, Clone)]
-pub struct DBChat {
-    #[serde(rename = "_id")]
-    pub id: Uuid,
+impl DBChat {
+    pub fn new(users: &[ObjectId], chat_type: ChatType, name: Option<String>, owner: Option<ObjectId>) -> Self {
+        Self {
+            id: None,
+            users: users.into(),
+            chat_type,
+            owner,
+            name,
+        }
+    }
 
-    pub users: Vec<Uuid>,
+    pub async fn create_indexes(db: &Database) {
+        let options = IndexOptions::builder().build();
 
-    pub private: bool,
+        let model1 = IndexModel::builder()
+            .keys(doc! {"users": 1u32})
+            .options(options.clone())
+            .build();
 
-    pub name: String,
+        DBChat::to_collection(&db)
+            .create_indexes(vec![model1], None)
+            .await
+            .expect("error creating index!");
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Validate, Clone)]
 pub struct DBChatMessage {
+    #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "_id")]
-    pub id: Uuid,
+    pub id: Option<ObjectId>,
 
-    pub chat_id: Uuid,
+    pub chat: ObjectId,
 
-    pub user_id: Uuid,
+    pub user: ObjectId,
 
     pub edit: Option<u64>,
 
-    pub time: u64,
-
-    pub message: Message,
+    pub message: String,
 }
 
 impl DBChatMessage {
-    pub fn new(chat_id: Uuid, user_id: Uuid, message: Message) -> Self {
+    pub fn new(chat: ObjectId, user: ObjectId, message: String) -> Self {
         DBChatMessage {
-            id: Uuid::default(),
+            id: None,
             edit: None,
-            time: date_now(),
-            user_id,
-            chat_id,
+            user,
+            chat,
             message,
         }
     }
+
+    pub async fn create_indexes(db: &Database) {
+        let options = IndexOptions::builder().build();
+
+        let model1 = IndexModel::builder()
+            .keys(doc! {"time": 1u32})
+            .options(options.clone())
+            .build();
+        let model2 = IndexModel::builder()
+            .keys(doc! {"chat_id": 1u32})
+            .options(options.clone())
+            .build();
+
+        DBChatMessage::to_collection(&db)
+            .create_indexes(vec![model1, model2], None)
+            .await
+            .expect("error creating index!");
+    }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub enum Message {
-    Text(String),
-    Emoji(char),
+
+#[derive(Debug, Serialize, Deserialize, Clone, Enum, Copy, PartialEq, Eq)]
+pub enum ChatType {
+    UserPrivate,
+    Private,
+    Group,
+}
+
+impl CollectionUtils<DBChat> for DBChat {
+    fn to_collection(db: &Database) -> Collection<DBChat> {
+        let name = Self::get_collection_name();
+        db.collection::<DBChat>(name)
+    }
+
+    fn get_collection_name() -> &'static str {
+        "Chat"
+    }
+}
+
+impl CollectionUtils<DBChatMessage> for DBChatMessage {
+    fn to_collection(db: &Database) -> Collection<DBChatMessage> {
+        let name = Self::get_collection_name();
+        db.collection::<DBChatMessage>(name)
+    }
+
+    fn get_collection_name() -> &'static str {
+        "ChatMessage"
+    }
 }
 
 

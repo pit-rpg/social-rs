@@ -1,15 +1,51 @@
-use crate::db::models::{InputUserLogin, OutputUser, User};
+use crate::controllers::{InputFindUser, InputUserLogin, OutputUser, User};
 use crate::graphql::context::GqlContext;
 use async_graphql::{Context, Object, Result};
-use mongodb::{bson::Uuid, Database};
+use mongodb::{Database};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 #[derive(Serialize, Debug, Default, Clone, Deserialize)]
-pub struct MutationSession;
+pub struct QuerySession;
 
 #[Object]
-impl MutationSession {
+impl QuerySession {
+    async fn user<'a>(&self, ctx: &'a Context<'_>) -> Result<Option<OutputUser>> {
+        println!("========>>>>");
+
+        let id = {
+            let gql_session = ctx.data::<GqlContext>().unwrap();
+            let session_data = gql_session.lock()?;
+            let id = session_data.get_user_id()?;
+
+            println!("SESSION_DATA ========>>>> {:?}", session_data);
+
+            if id.is_none() {
+                return Ok(None);
+            }
+
+            id.unwrap()
+        };
+
+        println!("+++> {:?}", id);
+
+        let db = ctx.data::<Arc<Database>>().unwrap();
+        let user = User::gt_by_id(db, id).await?;
+
+        Ok(Some(user.into()))
+    }
+
+    async fn find_user<'a>(
+        &self,
+        ctx: &'a Context<'_>,
+        data: InputFindUser,
+    ) -> Result<Vec<OutputUser>> {
+        let db = ctx.data::<Arc<Database>>().unwrap();
+        let res = User::find_user(db, data).await?;
+
+        Ok(res)
+    }
+
     async fn register<'a>(&self, ctx: &'a Context<'_>, data: InputUserLogin) -> Result<OutputUser> {
         let user = {
             let db = ctx.data::<Arc<Database>>().unwrap();
@@ -19,7 +55,7 @@ impl MutationSession {
         {
             let gql_session = ctx.data::<GqlContext>().unwrap();
             let mut session_data = gql_session.lock().unwrap();
-            session_data.user_id = Some(user.id.to_string());
+            session_data.user_id = user.id.map(|id| id.to_string());
         }
 
         Ok(user.into())
@@ -34,8 +70,11 @@ impl MutationSession {
         {
             let gql_session = ctx.data::<GqlContext>().unwrap();
             let mut session_data = gql_session.lock().unwrap();
-            session_data.user_id = Some(user.id.to_string());
+            session_data.user_id = user.id.map(|id| id.to_string());
+
+            println!("SESSION_DATA ========>>>> {:?}", session_data);
         }
+
 
         Ok(user.into())
     }
@@ -46,28 +85,5 @@ impl MutationSession {
         session_data.user_id = None;
 
         Ok(true)
-    }
-
-    async fn user<'a>(&self, ctx: &'a Context<'_>) -> Result<OutputUser> {
-        let id = {
-            let gql_session = ctx.data::<GqlContext>().unwrap();
-            let session_data = gql_session.lock().or(Err("cent get session"))?;
-            let id = session_data.user_id.as_ref().ok_or("cent get user")?;
-            Uuid::parse_str(id).or(Err("cent pars uuid"))?
-        };
-
-        let db = ctx.data::<Arc<Database>>().unwrap();
-        let user = User::gt_by_id(db, id).await?;
-
-        Ok(user.into())
-    }
-}
-
-pub struct RootMutation;
-
-#[Object]
-impl RootMutation {
-    async fn session(&self) -> Option<MutationSession> {
-        Some(MutationSession::default())
     }
 }

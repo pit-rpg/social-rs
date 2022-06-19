@@ -1,11 +1,14 @@
 #[macro_use]
 extern crate lazy_static;
 extern crate validator;
+
 mod db;
 mod graphql;
+mod controllers;
+
 use actix_session::{storage::CookieSessionStore, SessionExt, SessionMiddleware};
 use actix_web::{cookie::Key, dev::Service, middleware, web, App, HttpServer};
-use mongodb::bson::Uuid;
+use mongodb::bson::oid::ObjectId;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -35,7 +38,7 @@ async fn main() -> std::io::Result<()> {
 
                 if session.get::<String>("session_uid").unwrap().is_none() {
                     session
-                        .insert("session_uid", Uuid::default().to_string())
+                        .insert("session_uid", ObjectId::new().to_string())
                         .unwrap();
                 }
 
