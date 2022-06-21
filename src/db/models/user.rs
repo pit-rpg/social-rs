@@ -33,12 +33,15 @@ pub struct DBUser {
 
     pub gender: Gender,
 
+    #[serde(skip_serializing_if = "Option::is_none")]
     #[validate(email)]
     pub mail: Option<String>,
 
+    #[serde(skip_serializing_if = "Option::is_none")]
     #[validate(range(min = 18, max = 20))]
     pub age: Option<u32>,
 
+    #[serde(skip_serializing_if = "Option::is_none")]
     #[validate(phone)]
     pub phone: Option<String>,
 }
@@ -56,7 +59,14 @@ impl CollectionUtils<DBUser> for DBUser {
 
 impl DBUser {
     pub async fn create_indexes(db: &Database) {
-        let options = IndexOptions::builder().unique(true).build();
+        let options = IndexOptions::builder()
+            .unique(true)
+            .partial_filter_expression(doc!{
+                "name_user": {"$type": "string"},
+                "phone": {"$type": "string"},
+                "mail": {"$type": "string"},
+            })
+            .build();
 
         let model1 = IndexModel::builder()
             .keys(doc! {"name_user": 1})

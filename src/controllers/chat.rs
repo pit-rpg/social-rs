@@ -1,4 +1,5 @@
-use crate::db::{utils::CollectionUtils, ChatType, DBChat, DBChatMessage};
+use crate::db::{utils::{CollectionUtils, map_id_to_string}, ChatType, DBChat, DBChatMessage};
+use crate::graphql::utils::GQLResult;
 use async_graphql::connection::{Connection, Edge, EmptyFields};
 use async_graphql::{SimpleObject};
 use futures::stream::TryStreamExt;
@@ -6,7 +7,6 @@ use mongodb::bson::to_bson;
 use mongodb::bson::Document;
 use mongodb::{bson::doc, bson::oid::ObjectId, options::FindOptions, Database};
 use serde::{Deserialize, Serialize};
-use std::result::Result;
 
 lazy_static! {
     static ref ARGON_2_CONF: argon2::Config<'static> = argon2::Config::default();
@@ -18,7 +18,7 @@ impl Chat {
     pub async fn create_user_private(
         db: &Database,
         user: &ObjectId,
-    ) -> Result<OutputChat, &'static str> {
+    ) -> GQLResult<OutputChat> {
         let chat = DBChat::new(&[*user], ChatType::UserPrivate, None, Some(user.clone()));
         DBChat::to_collection(db)
             .insert_one(&chat, None)
@@ -32,7 +32,7 @@ impl Chat {
         db: &Database,
         session_user: &ObjectId,
         user: &ObjectId,
-    ) -> Result<OutputChat, &'static str> {
+    ) -> GQLResult<OutputChat> {
         let mut chat = DBChat::new(
             &[*session_user, *user],
             ChatType::Private,
@@ -56,9 +56,9 @@ impl Chat {
         after: Option<ObjectId>,
         before: Option<ObjectId>,
         first: Option<i64>,
-    ) -> Result<Connection<String, OutputChat, EmptyFields, EmptyFields>, &'static str> {
+    ) -> GQLResult<Connection<String, OutputChat, EmptyFields, EmptyFields>> {
         if before.is_none() && after.is_some() {
-            return Err("The \"before\" and \"after\" parameters cannot exist at the same time");
+            Err("The \"before\" and \"after\" parameters cannot exist at the same time")?;
         }
 
         let first = first.or(Some(50)).unwrap().min(500).max(0);
@@ -98,7 +98,7 @@ impl Chat {
             Edge::with_additional_fields(chat.id.unwrap().to_string(), chat.into(), EmptyFields)
         }));
 
-        Ok::<_, &'static str>(connection)
+        Ok(connection)
     }
 
     pub async fn send_message(
@@ -106,7 +106,7 @@ impl Chat {
         owner: ObjectId,
         chat: ObjectId,
         message: String,
-    ) -> Result<OutputChatMessage, &'static str> {
+    ) -> GQLResult<OutputChatMessage, &'static str> {
         let query_chat = doc! {"_id": chat, "users": owner};
         let mut message = DBChatMessage::new(chat, owner, message);
 
@@ -135,9 +135,9 @@ impl Chat {
         after: Option<ObjectId>,
         before: Option<ObjectId>,
         first: Option<i64>,
-    ) -> Result<Connection<String, OutputChatMessage, EmptyFields, EmptyFields>, &'static str> {
+    ) -> GQLResult<Connection<String, OutputChatMessage, EmptyFields, EmptyFields>> {
         if before.is_none() && after.is_some() {
-            return Err("The \"before\" and \"after\" parameters cannot exist at the same time");
+            Err("The \"before\" and \"after\" parameters cannot exist at the same time")?;
         }
 
         let first = first.or(Some(50)).unwrap().min(500).max(0);
@@ -182,7 +182,7 @@ impl Chat {
             Edge::with_additional_fields(msg.id.unwrap().to_string(), msg.into(), EmptyFields)
         }));
 
-        Ok::<_, &'static str>(connection)
+        Ok(connection)
     }
 
     pub async fn remove_messages(
@@ -190,7 +190,7 @@ impl Chat {
         owner: ObjectId,
         chat: ObjectId,
         messages: Vec<ObjectId>,
-    ) -> Result<bool, &'static str> {
+    ) -> GQLResult<bool> {
         let query_chat = doc! {"_id": chat, "users": owner};
 
         DBChat::to_collection(db)
@@ -210,7 +210,7 @@ impl Chat {
         db: &Database,
         owner: ObjectId,
         chat_id: ObjectId,
-    ) -> Result<bool, &'static str> {
+    ) -> GQLResult<bool> {
         let query_chat = doc! {"_id": chat_id, "owner": owner};
         let variant = to_bson(&ChatType::Private).unwrap();
 
@@ -259,7 +259,7 @@ pub struct OutputChat {
 impl From<&DBChat> for OutputChat {
     fn from(item: &DBChat) -> OutputChat {
         OutputChat {
-            id: item.id.map(|id| id.to_string()),
+            id: map_id_to_string(&item.id),
             chat_type: Some(item.chat_type),
             name: item.name.clone(),
             owner: item.owner.map(|i| i.to_string()),
@@ -286,7 +286,7 @@ pub struct OutputChatMessage {
 impl From<&DBChatMessage> for OutputChatMessage {
     fn from(item: &DBChatMessage) -> OutputChatMessage {
         OutputChatMessage {
-            id: item.id.map(|id| id.to_string()),
+            id: map_id_to_string(&item.id),
             chat: Some(item.chat.to_string()),
             user: Some(item.user.to_string()),
             edit: item.edit,
@@ -300,12 +300,3 @@ impl From<DBChatMessage> for OutputChatMessage {
         (&item).into()
     }
 }
-
-// #[derive(InputObject)]
-// pub struct InputUserLogin {
-//     #[graphql(validator(min_length = 1, max_length = 128))]
-//     name_user: String,
-
-//     #[graphql(validator(min_length = 1, max_length = 256))]
-//     password: String,
-// }

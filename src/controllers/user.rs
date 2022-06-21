@@ -1,4 +1,4 @@
-use crate::db::{utils::CollectionUtils, DBUser, Gender};
+use crate::db::{utils::{CollectionUtils, map_id_to_string}, DBUser, Gender};
 use async_graphql::{InputObject, SimpleObject};
 use futures::stream::{StreamExt, TryStreamExt};
 use mongodb::{bson::doc, options::FindOptions, Database, bson::oid::ObjectId};
@@ -22,6 +22,8 @@ impl User {
     }
 
     pub async fn register(db: &Database, data: InputUserLogin) -> Result<DBUser, &'static str> {
+        println!("Register!!! {:?}", data);
+
         let password_salt = ObjectId::default();
         let password = Self::hash_password(&data.password, password_salt);
 
@@ -36,15 +38,29 @@ impl User {
             phone: None,
         };
 
-        let id = DBUser::to_collection(&db)
+        println!("new user!!! {:?}", user);
+
+        let res = DBUser::to_collection(&db)
             .insert_one(&user, None)
-            .await
-            .or(Err("cent create user"))?
+            .await;
+
+        if let Err(err) = res {
+            println!("{:?}", err);
+            return Err("cent create user 1");
+        }
+
+        let id = res
+            .unwrap()
             .inserted_id
             .as_object_id()
-            .ok_or("cent create user")?;
+            .ok_or("cent create user 2")?;
 
-        Chat::create_user_private(db, &id).await;
+        println!("inserted user!!! {:?}", id);
+
+        let _ = Chat::create_user_private(db, &id).await;
+
+        println!("chat created!!! {:?}", id);
+
 
         Self::log_in(db, data).await
     }
@@ -65,22 +81,24 @@ impl User {
         Ok(user)
     }
 
-    pub async fn gt_by_id(db: &Database, id: ObjectId) -> Result<DBUser, &'static str> {
+    pub async fn gt_by_id(db: &Database, id: ObjectId) -> Option<OutputUser> {
         DBUser::to_collection(&db)
             .find_one(doc! {"_id": id}, None)
             .await
-            .or(Err("cent find user"))?
-            .ok_or("cent find user")
+            .ok()?
+            .map(|u| u.into())
     }
 
     pub async fn find_user(
         db: &Database,
         data: InputFindUser,
     ) -> Result<Vec<OutputUser>, &'static str> {
-        let options = FindOptions::builder().limit(data.limit).build();
+        let options = FindOptions::builder().limit(data.limit.unwrap_or(10) as i64).build();
+
+        println!("===> FIND_USER: {:?}", data);
 
         let cursor = DBUser::to_collection(&db)
-            .find(doc! {"name_user": data.name_user}, Some(options))
+            .find(doc! {"name_user": {"$regex": data.name_user}}, Some(options))
             .await
             .or(Err("cent find user"))?;
 
@@ -95,9 +113,25 @@ impl User {
 
         Ok(res)
     }
+
+    pub async fn get_user(
+        db: &Database,
+        id: String,
+    ) -> Result<OutputUser, &'static str> {
+        let id = ObjectId::parse_str(&id)
+            .or(Err("cent parse user id"))?;
+
+
+        DBUser::to_collection(&db)
+            .find_one(doc!{"_id": id}, None)
+            .await
+            .or(Err("cent get user"))?
+            .ok_or("cent get user")
+            .map(|user| user.into())
+    }
 }
 
-#[derive(InputObject)]
+#[derive(InputObject, Debug, Serialize, Deserialize, Clone)]
 pub struct InputUserLogin {
     #[graphql(validator(min_length = 1, max_length = 128))]
     name_user: String,
@@ -106,13 +140,13 @@ pub struct InputUserLogin {
     password: String,
 }
 
-#[derive(InputObject)]
+#[derive(InputObject, Debug, Serialize, Deserialize, Clone)]
 pub struct InputFindUser {
     #[graphql(validator(min_length = 1, max_length = 128))]
     name_user: String,
 
-    #[graphql(default = 10, validator(minimum = 1, maximum = 100))]
-    limit: i64,
+    #[graphql(validator(minimum = 1, maximum = 100))]
+    limit: Option<i32>,
 }
 
 #[derive(SimpleObject, Debug, Serialize, Deserialize, Default, Clone)]
@@ -123,19 +157,17 @@ pub struct OutputUser {
     gender: Option<Gender>,
     mail: Option<String>,
     age: Option<u32>,
-    phone: Option<String>,
 }
 
 impl From<&DBUser> for OutputUser {
     fn from(item: &DBUser) -> OutputUser {
         OutputUser {
-            id: item.id.map(|id| id.to_string()),
+            id: map_id_to_string(&item.id),
             name_user: Some(item.name_user.clone()),
             age: item.age,
             gender: Some(item.gender),
             mail: item.mail.clone(),
             name_display: item.name_display.clone(),
-            phone: item.phone.clone(),
         }
     }
 }

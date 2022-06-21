@@ -2,6 +2,7 @@ use super::{models::{DBUser, DBChat, DBChatMessage}, RedisPool};
 use deadpool::unmanaged::Pool;
 use mongodb::{options::ClientOptions, Client, Database};
 use num_cpus;
+use std::env;
 
 pub async fn init(redis_pull_size: Option<usize>) -> (RedisPool, Client, Database) {
     let (client, db) = connect_mongo().await;
@@ -19,7 +20,9 @@ pub async fn create_indexes(db: &Database) {
 }
 
 pub async fn connect_mongo() -> (Client, Database) {
-    let mut client_options = ClientOptions::parse("mongodb://root:example@localhost:27017")
+    let mongo_url = env::var("MONGO_URL").expect("env var MONGO_URL is missing");
+
+    let mut client_options = ClientOptions::parse(mongo_url)
         .await
         .expect("Can't connect to MongoDb");
 
@@ -34,9 +37,10 @@ pub async fn connect_mongo() -> (Client, Database) {
 }
 
 pub async fn connect_redis(pull_size: Option<usize>) -> RedisPool {
+    let redis_url = env::var("REDIS_URL").expect("env var REDIS_URL is missing");
     let items = pull_size.unwrap_or(num_cpus::get() * 2);
 
-    let client = redis::Client::open("redis://127.0.0.1/").expect("Can't connect to Redis");
+    let client = redis::Client::open(redis_url).expect("Can't connect to Redis");
 
     let connections: Vec<_> = (0..items)
         .map(|_| client.get_connection().expect("Cen't connect to redis"))

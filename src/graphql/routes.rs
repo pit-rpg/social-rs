@@ -19,7 +19,7 @@ pub async fn gql_playground() -> HttpResponse {
         ))
 }
 
-pub async fn index(
+pub async fn graphql(
     schema: web::Data<AppSchema>,
     redis_pool: web::Data<RedisPool>,
     mongo_db: web::Data<Database>,
@@ -57,7 +57,7 @@ pub async fn index(
     Ok(res)
 }
 
-pub async fn index_ws(
+pub async fn graphql_ws(
     schema: web::Data<AppSchema>,
     redis_pool: web::Data<RedisPool>,
     mongo_db: web::Data<Database>,

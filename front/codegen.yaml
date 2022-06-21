@@ -1,0 +1,13 @@
+schema: ../graphql/schema.gql
+# schema: http://localhost:8080/graphql
+# documents: './app/**/*.ts'
+# documents: ['./app/**/*.ts', './app/**/*.ts']
+documents: 'app/graphQL/queries.ts'
+generates:
+  app/graphQL/generated_sdk.ts:
+    scalars:
+        ID: string
+    plugins:
+      - typescript
+      - typescript-operations
+      - typescript-graphql-request

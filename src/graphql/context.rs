@@ -1,6 +1,7 @@
 use std::sync::{Arc, Mutex, MutexGuard};
 use mongodb::{bson::oid::ObjectId};
 use async_graphql::{Result};
+use crate::db::utils::map_string_to_id;
 
 #[derive(Clone, Debug, Default)]
 pub struct ContextData {
@@ -14,12 +15,8 @@ impl ContextData {
         }
     }
 
-    pub fn get_user_id(&self) -> Result<Option<ObjectId>> {
-        if self.user_id.is_none() {return Ok(None)}
-
-        let id = ObjectId::parse_str(self.user_id.as_ref().unwrap()).or(Err("cent pars ObjectId"))?;
-
-        Ok(Some(id))
+    pub fn get_user_id(&self) -> Option<ObjectId> {
+        map_string_to_id(&self.user_id)
     }
 
     pub fn to_shared(self) -> GqlContext {

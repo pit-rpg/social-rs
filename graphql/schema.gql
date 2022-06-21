@@ -16,7 +16,7 @@ enum Gender {
 
 input InputFindUser {
 	nameUser: String!
-	limit: Int! = 10
+	limit: Int
 }
 
 input InputUserLogin {
@@ -26,7 +26,7 @@ input InputUserLogin {
 
 
 type OutputChat {
-	id: String
+	id: String!
 	owner: String
 	users: [String!]
 	chatType: ChatType
@@ -59,7 +59,7 @@ type OutputChatEdge {
 }
 
 type OutputChatMessage {
-	id: String
+	id: String!
 	chat: String
 	user: String
 	edit: Int
@@ -92,13 +92,12 @@ type OutputChatMessageEdge {
 }
 
 type OutputUser {
-	id: String
+	id: String!
 	nameUser: String
 	nameDisplay: String
 	gender: Gender
 	mail: String
 	age: Int
-	phone: String
 }
 
 """
@@ -136,6 +135,7 @@ type QueryChat {
 type QuerySession {
 	user: OutputUser
 	findUser(data: InputFindUser!): [OutputUser!]!
+	getUser(id: String!): OutputUser!
 	register(data: InputUserLogin!): OutputUser!
 	logIn(data: InputUserLogin!): OutputUser!
 	logOut: Boolean!

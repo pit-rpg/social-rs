@@ -1,17 +1,29 @@
 #[macro_use]
 extern crate lazy_static;
-extern crate validator;
 
+extern crate validator;
+extern crate dotenv;
+
+use dotenv::dotenv;
 mod db;
 mod graphql;
 mod controllers;
+mod error;
 
 use actix_session::{storage::CookieSessionStore, SessionExt, SessionMiddleware};
 use actix_web::{cookie::Key, dev::Service, middleware, web, App, HttpServer};
 use mongodb::bson::oid::ObjectId;
+use std::env;
+use actix_files as fs;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    dotenv().ok();
+
+    let app_host = env::var("APP_HOST").expect("env var APP_HOST is missing");
+    let app_port = env::var("APP_PORT").expect("env var APP_PORT is missing");
+    let app_port = app_port.parse::<u16>().expect("cent parse port env variable");
+
     let secret_key = Key::from(&[
         68, 7, 127, 34, 160, 144, 105, 241, 74, 45, 54, 104, 47, 64, 8, 61, 7, 116, 55, 186, 147,
         17, 113, 147, 35, 246, 232, 62, 136, 121, 66, 167, 71, 87, 177, 97, 19, 10, 20, 104, 217,
@@ -26,6 +38,8 @@ async fn main() -> std::io::Result<()> {
     let schema = graphql::schema::get_schema();
 
     graphql::dump_schema_to_disk(&schema).await?;
+
+    println!("http://{}:{}", app_host, app_port);
 
     HttpServer::new(move || {
         App::new()
@@ -54,16 +68,23 @@ async fn main() -> std::io::Result<()> {
                 secret_key.clone(),
             ))
             .app_data(web::Data::new(schema.clone()))
-            .service(web::resource("/").to(graphql::routes::index))
+            .service(web::resource("/graphql").to(graphql::routes::graphql))
             .service(
                 web::resource("/ws")
                     .guard(actix_web::guard::Get())
                     .guard(actix_web::guard::Header("upgrade", "websocket"))
-                    .to(graphql::routes::index_ws),
+                    .to(graphql::routes::graphql_ws),
             )
             .service(web::resource("/pg").to(graphql::routes::gql_playground))
+            .service(
+                fs::Files::new("/", "dist")
+                    .show_files_listing()
+                    .use_last_modified(true)
+                    .prefer_utf8(true)
+                    .index_file("index.html")
+            )
     })
-    .bind(("127.0.0.1", 3030))?
+    .bind((app_host, app_port))?
     .run()
     .await
 }

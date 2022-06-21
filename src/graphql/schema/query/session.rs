@@ -1,5 +1,6 @@
 use crate::controllers::{InputFindUser, InputUserLogin, OutputUser, User};
 use crate::graphql::context::GqlContext;
+use crate::graphql::utils::GQLResult;
 use async_graphql::{Context, Object, Result};
 use mongodb::{Database};
 use serde::{Deserialize, Serialize};
@@ -10,15 +11,11 @@ pub struct QuerySession;
 
 #[Object]
 impl QuerySession {
-    async fn user<'a>(&self, ctx: &'a Context<'_>) -> Result<Option<OutputUser>> {
-        println!("========>>>>");
-
+    async fn user<'a>(&self, ctx: &'a Context<'_>) -> GQLResult<Option<OutputUser>> {
         let id = {
             let gql_session = ctx.data::<GqlContext>().unwrap();
             let session_data = gql_session.lock()?;
-            let id = session_data.get_user_id()?;
-
-            println!("SESSION_DATA ========>>>> {:?}", session_data);
+            let id = session_data.get_user_id();
 
             if id.is_none() {
                 return Ok(None);
@@ -27,26 +24,35 @@ impl QuerySession {
             id.unwrap()
         };
 
-        println!("+++> {:?}", id);
-
         let db = ctx.data::<Arc<Database>>().unwrap();
-        let user = User::gt_by_id(db, id).await?;
+        let user = User::gt_by_id(db, id).await;
 
-        Ok(Some(user.into()))
+        Ok(user)
     }
 
     async fn find_user<'a>(
         &self,
         ctx: &'a Context<'_>,
         data: InputFindUser,
-    ) -> Result<Vec<OutputUser>> {
+    ) -> GQLResult<Vec<OutputUser>> {
         let db = ctx.data::<Arc<Database>>().unwrap();
         let res = User::find_user(db, data).await?;
 
         Ok(res)
     }
 
-    async fn register<'a>(&self, ctx: &'a Context<'_>, data: InputUserLogin) -> Result<OutputUser> {
+    async fn get_user<'a>(
+        &self,
+        ctx: &'a Context<'_>,
+        id: String,
+    ) -> GQLResult<OutputUser> {
+        let db = ctx.data::<Arc<Database>>().unwrap();
+        let res = User::get_user(db, id).await?;
+
+        Ok(res)
+    }
+
+    async fn register<'a>(&self, ctx: &'a Context<'_>, data: InputUserLogin) -> GQLResult<OutputUser> {
         let user = {
             let db = ctx.data::<Arc<Database>>().unwrap();
             User::register(db, data).await?
@@ -61,7 +67,7 @@ impl QuerySession {
         Ok(user.into())
     }
 
-    async fn log_in<'a>(&self, ctx: &'a Context<'_>, data: InputUserLogin) -> Result<OutputUser> {
+    async fn log_in<'a>(&self, ctx: &'a Context<'_>, data: InputUserLogin) -> GQLResult<OutputUser> {
         let user = {
             let db = ctx.data::<Arc<Database>>().unwrap();
             User::log_in(db, data).await?
@@ -71,15 +77,13 @@ impl QuerySession {
             let gql_session = ctx.data::<GqlContext>().unwrap();
             let mut session_data = gql_session.lock().unwrap();
             session_data.user_id = user.id.map(|id| id.to_string());
-
-            println!("SESSION_DATA ========>>>> {:?}", session_data);
         }
 
 
         Ok(user.into())
     }
 
-    async fn log_out<'a>(&self, ctx: &'a Context<'_>) -> Result<bool> {
+    async fn log_out<'a>(&self, ctx: &'a Context<'_>) -> GQLResult<bool> {
         let gql_session = ctx.data::<GqlContext>().unwrap();
         let mut session_data = gql_session.lock().unwrap();
         session_data.user_id = None;

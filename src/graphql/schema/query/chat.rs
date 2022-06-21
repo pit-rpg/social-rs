@@ -1,5 +1,6 @@
 use crate::controllers::{Chat, OutputChat, OutputChatMessage};
-use crate::graphql::context::GqlContext;
+use crate::graphql::utils::{get_user_id, GQLResult};
+use crate::db::utils::{map_string_to_id};
 use async_graphql::connection::Connection;
 use async_graphql::{Context, Object, Result};
 use mongodb::bson::oid::ObjectId;
@@ -12,14 +13,8 @@ pub struct QueryChat;
 
 #[Object]
 impl QueryChat {
-    async fn create_user_private<'a>(&self, ctx: &'a Context<'_>) -> Result<Option<OutputChat>> {
-        let id = {
-            let gql_session = ctx.data::<GqlContext>().unwrap();
-            let session_data = gql_session.lock()?;
-
-            session_data.get_user_id()?.unwrap()
-        };
-
+    async fn create_user_private<'a>(&self, ctx: &'a Context<'_>) -> GQLResult<Option<OutputChat>> {
+        let id = get_user_id(ctx)?;
         let db = ctx.data::<Arc<Database>>().unwrap();
         let chat = Chat::create_user_private(db, &id).await?;
 
@@ -30,16 +25,9 @@ impl QueryChat {
         &self,
         ctx: &'a Context<'_>,
         user_id: String,
-    ) -> Result<Option<OutputChat>> {
+    ) -> GQLResult<Option<OutputChat>> {
+        let id = get_user_id(ctx)?;
         let user_id: ObjectId = ObjectId::parse_str(&user_id)?;
-
-        let id = {
-            let gql_session = ctx.data::<GqlContext>().unwrap();
-            let session_data = gql_session.lock()?;
-
-            session_data.get_user_id()?.unwrap()
-        };
-
         let db = ctx.data::<Arc<Database>>().unwrap();
         let chat = Chat::create_private(db, &id, &user_id).await?;
 
@@ -52,16 +40,10 @@ impl QueryChat {
         after: Option<String>,
         before: Option<String>,
         first: Option<i64>,
-    ) -> Result<Connection<String, OutputChat>> {
-        let after = after.map(|e| ObjectId::parse_str(e).unwrap());
-        let before = before.map(|e| ObjectId::parse_str(e).unwrap());
-
-        let id = {
-            let gql_session = ctx.data::<GqlContext>().unwrap();
-            let session_data = gql_session.lock()?;
-
-            session_data.get_user_id()?.unwrap()
-        };
+    ) -> GQLResult<Connection<String, OutputChat>> {
+        let after = map_string_to_id(&after);
+        let before = map_string_to_id(&before);
+        let id = get_user_id(ctx)?;
 
         let db = ctx.data::<Arc<Database>>().unwrap();
         let chats = Chat::get_chats(db, &id, after, before, first).await?;
@@ -76,17 +58,11 @@ impl QueryChat {
         after: Option<String>,
         before: Option<String>,
         first: Option<i64>,
-    ) -> Result<Connection<String, OutputChatMessage>> {
-        let after = after.map(|e| ObjectId::parse_str(e).unwrap());
-        let before = before.map(|e| ObjectId::parse_str(e).unwrap());
-        let chat = ObjectId::parse_str(chat).unwrap();
-
-        let id = {
-            let gql_session = ctx.data::<GqlContext>().unwrap();
-            let session_data = gql_session.lock()?;
-
-            session_data.get_user_id()?.unwrap()
-        };
+    ) -> GQLResult<Connection<String, OutputChatMessage>> {
+        let after = map_string_to_id(&after);
+        let before = map_string_to_id(&before);
+        let chat = ObjectId::parse_str(chat)?;
+        let id = get_user_id(ctx)?;
 
         let db = ctx.data::<Arc<Database>>().unwrap();
         let messages = Chat::get_messages(db, &id, chat, after, before, first).await?;
@@ -100,15 +76,9 @@ impl QueryChat {
         ctx: &'a Context<'_>,
         chat: String,
         message: String,
-    ) -> Result<Option<OutputChatMessage>> {
-        let chat = ObjectId::parse_str(chat).or(Err("Cen't parse ObjectId"))?;
-
-        let id = {
-            let gql_session = ctx.data::<GqlContext>().unwrap();
-            let session_data = gql_session.lock()?;
-
-            session_data.get_user_id()?.unwrap()
-        };
+    ) -> GQLResult<Option<OutputChatMessage>> {
+        let chat = ObjectId::parse_str(chat)?;
+        let id = get_user_id(ctx)?;
 
         let db = ctx.data::<Arc<Database>>().unwrap();
         let message = Chat::send_message(db, id, chat, message).await?;
@@ -121,20 +91,15 @@ impl QueryChat {
         ctx: &'a Context<'_>,
         chat: String,
         messages: Vec<String>,
-    ) -> Result<Option<bool>> {
-        let chat = ObjectId::parse_str(chat).or(Err("Cen't parse ObjectId"))?;
+    ) -> GQLResult<Option<bool>> {
+        let chat = ObjectId::parse_str(chat)?;
         let messages = messages
             .into_iter()
             .map(|id| ObjectId::parse_str(id).ok())
             .flatten()
             .collect::<Vec<ObjectId>>();
 
-        let id = {
-            let gql_session = ctx.data::<GqlContext>().unwrap();
-            let session_data = gql_session.lock()?;
-
-            session_data.get_user_id()?.unwrap()
-        };
+        let id = get_user_id(ctx)?;
 
         let db = ctx.data::<Arc<Database>>().unwrap();
         let res = Chat::remove_messages(db, id, chat, messages).await?;
@@ -146,15 +111,10 @@ impl QueryChat {
         &self,
         ctx: &'a Context<'_>,
         chat: String,
-    ) -> Result<Option<bool>> {
-        let chat = ObjectId::parse_str(chat).or(Err("Cen't parse ObjectId"))?;
+    ) -> GQLResult<Option<bool>> {
+        let chat = ObjectId::parse_str(chat)?;
+        let id = get_user_id(ctx)?;
 
-        let id = {
-            let gql_session = ctx.data::<GqlContext>().unwrap();
-            let session_data = gql_session.lock()?;
-
-            session_data.get_user_id()?.unwrap()
-        };
         let db = ctx.data::<Arc<Database>>().unwrap();
         let res = Chat::remove_chat(db, id, chat).await?;
 

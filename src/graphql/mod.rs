@@ -3,6 +3,7 @@ extern crate tokio;
 pub mod context;
 pub mod routes;
 pub mod schema;
+pub mod utils;
 
 use async_graphql::{ObjectType, Schema, SubscriptionType};
 use std::result::Result;

@@ -1,0 +1,44 @@
+* > * , html, body{
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+@color0: #073B4C;
+@color0-0: #042b38;
+@color1: #eeeeee;
+@color2: #EF476F;
+@color3: #FFD166;
+@color4: #06D6A0;
+@color5: #118AB2;
+
+@mainFontSize: 16pt;
+
+
+body {
+    background-color: @color0;
+    color: @color1;
+    a {
+        color: @color1;
+    }
+
+    font-size: @mainFontSize;
+}
+
+.component-header {
+    border-bottom: solid 0.1rem @color0-0;
+    box-shadow: 0px 0px 5px 1px rgba(0,0,0,0.2);
+    padding: 0.25em 0.5em;
+}
+
+.messages {
+    .chat-message {
+        // padding: mainFontSize;
+
+        // background-color: @color1;
+        // color: @color0;
+    }
+    .my {
+        text-align: right;
+    }
+}
