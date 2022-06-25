@@ -1,16 +1,9 @@
 import {useStore} from 'app/store';
 import React, {FunctionComponent} from 'react';
-import {InputText, Button} from 'app/components/basic';
-import {ChatInput} from 'app/components/functional';
-import {controllerChats} from 'app/controllers';
-import {serverData} from 'app/serverData';
-import {OutputChatMessage} from 'app/graphQL/generated_sdk';
-import {MainRoutes} from 'app/components/pages/MainRoutes';
-import {Link} from "react-router-dom";
-import {} from 'app/controllers';
+import {ChatMessage} from 'app/graphQL/generated_sdk';
 
 export type PropsItemChatMessage = {
-    message: OutputChatMessage,
+    message: ChatMessage,
 }
 
 export const ItemChatMessage:FunctionComponent<PropsItemChatMessage> = ({message}) => {

@@ -13,6 +13,72 @@ export type Scalars = {
   Boolean: boolean;
   Int: number;
   Float: number;
+  /** A scalar that can represent any JSON Object value. */
+  JSONObject: any;
+};
+
+export type Chat = {
+  __typename?: 'Chat';
+  chatType?: Maybe<ChatType>;
+  id?: Maybe<Scalars['String']>;
+  lastMsg?: Maybe<Scalars['String']>;
+  name?: Maybe<Scalars['String']>;
+  owner?: Maybe<Scalars['String']>;
+  userLastMsg?: Maybe<Scalars['JSONObject']>;
+  users?: Maybe<Array<Scalars['String']>>;
+};
+
+export type ChatConnection = {
+  __typename?: 'ChatConnection';
+  /** A list of edges. */
+  edges: Array<ChatEdge>;
+  /** A list of nodes. */
+  nodes: Array<Chat>;
+  /** Information to aid in pagination. */
+  pageInfo: PageInfo;
+};
+
+/** An edge in a connection. */
+export type ChatEdge = {
+  __typename?: 'ChatEdge';
+  /** A cursor for use in pagination */
+  cursor: Scalars['String'];
+  /** The item at the end of the edge */
+  node: Chat;
+};
+
+export type ChatMessage = {
+  __typename?: 'ChatMessage';
+  chat?: Maybe<Scalars['String']>;
+  edit?: Maybe<Scalars['Int']>;
+  id?: Maybe<Scalars['String']>;
+  message?: Maybe<Scalars['String']>;
+  user?: Maybe<Scalars['String']>;
+};
+
+export type ChatMessageChange = {
+  __typename?: 'ChatMessageChange';
+  change: SubscriptionChange;
+  message: ChatMessage;
+};
+
+export type ChatMessageConnection = {
+  __typename?: 'ChatMessageConnection';
+  /** A list of edges. */
+  edges: Array<ChatMessageEdge>;
+  /** A list of nodes. */
+  nodes: Array<ChatMessage>;
+  /** Information to aid in pagination. */
+  pageInfo: PageInfo;
+};
+
+/** An edge in a connection. */
+export type ChatMessageEdge = {
+  __typename?: 'ChatMessageEdge';
+  /** A cursor for use in pagination */
+  cursor: Scalars['String'];
+  /** The item at the end of the edge */
+  node: ChatMessage;
 };
 
 export enum ChatType {
@@ -38,68 +104,6 @@ export type InputUserLogin = {
   password: Scalars['String'];
 };
 
-export type OutputChat = {
-  __typename?: 'OutputChat';
-  chatType?: Maybe<ChatType>;
-  id: Scalars['String'];
-  name?: Maybe<Scalars['String']>;
-  owner?: Maybe<Scalars['String']>;
-  users?: Maybe<Array<Scalars['String']>>;
-};
-
-export type OutputChatConnection = {
-  __typename?: 'OutputChatConnection';
-  /** A list of edges. */
-  edges: Array<OutputChatEdge>;
-  /** Information to aid in pagination. */
-  pageInfo: PageInfo;
-};
-
-/** An edge in a connection. */
-export type OutputChatEdge = {
-  __typename?: 'OutputChatEdge';
-  /** A cursor for use in pagination */
-  cursor: Scalars['String'];
-  /** The item at the end of the edge */
-  node: OutputChat;
-};
-
-export type OutputChatMessage = {
-  __typename?: 'OutputChatMessage';
-  chat?: Maybe<Scalars['String']>;
-  edit?: Maybe<Scalars['Int']>;
-  id: Scalars['String'];
-  message?: Maybe<Scalars['String']>;
-  user?: Maybe<Scalars['String']>;
-};
-
-export type OutputChatMessageConnection = {
-  __typename?: 'OutputChatMessageConnection';
-  /** A list of edges. */
-  edges: Array<OutputChatMessageEdge>;
-  /** Information to aid in pagination. */
-  pageInfo: PageInfo;
-};
-
-/** An edge in a connection. */
-export type OutputChatMessageEdge = {
-  __typename?: 'OutputChatMessageEdge';
-  /** A cursor for use in pagination */
-  cursor: Scalars['String'];
-  /** The item at the end of the edge */
-  node: OutputChatMessage;
-};
-
-export type OutputUser = {
-  __typename?: 'OutputUser';
-  age?: Maybe<Scalars['Int']>;
-  gender?: Maybe<Gender>;
-  id: Scalars['String'];
-  mail?: Maybe<Scalars['String']>;
-  nameDisplay?: Maybe<Scalars['String']>;
-  nameUser?: Maybe<Scalars['String']>;
-};
-
 /** Information about pagination in a connection */
 export type PageInfo = {
   __typename?: 'PageInfo';
@@ -115,13 +119,13 @@ export type PageInfo = {
 
 export type QueryChat = {
   __typename?: 'QueryChat';
-  createPrivate?: Maybe<OutputChat>;
-  createUserPrivate?: Maybe<OutputChat>;
-  getChats: OutputChatConnection;
-  getMessages: OutputChatMessageConnection;
+  createPrivate?: Maybe<Chat>;
+  createUserPrivate?: Maybe<Chat>;
+  getChats: ChatConnection;
+  getMessages: ChatMessageConnection;
   removeChat?: Maybe<Scalars['Boolean']>;
   removeMessages?: Maybe<Scalars['Boolean']>;
-  sendMessage?: Maybe<OutputChatMessage>;
+  sendMessage?: Maybe<ChatMessage>;
 };
 
 
@@ -134,6 +138,7 @@ export type QueryChatGetChatsArgs = {
   after?: InputMaybe<Scalars['String']>;
   before?: InputMaybe<Scalars['String']>;
   first?: InputMaybe<Scalars['Int']>;
+  last?: InputMaybe<Scalars['Int']>;
 };
 
 
@@ -142,6 +147,7 @@ export type QueryChatGetMessagesArgs = {
   before?: InputMaybe<Scalars['String']>;
   chat: Scalars['String'];
   first?: InputMaybe<Scalars['Int']>;
+  last?: InputMaybe<Scalars['Int']>;
 };
 
 
@@ -163,12 +169,12 @@ export type QueryChatSendMessageArgs = {
 
 export type QuerySession = {
   __typename?: 'QuerySession';
-  findUser: Array<OutputUser>;
-  getUser: OutputUser;
-  logIn: OutputUser;
+  findUser: Array<User>;
+  getUser: User;
+  logIn: User;
   logOut: Scalars['Boolean'];
-  register: OutputUser;
-  user?: Maybe<OutputUser>;
+  register: User;
+  user?: Maybe<User>;
 };
 
 
@@ -200,7 +206,7 @@ export type RootQuery = {
 export type RootSubscription = {
   __typename?: 'RootSubscription';
   interval: Scalars['Int'];
-  values: Scalars['Int'];
+  watchMessages: ChatMessageChange;
 };
 
 
@@ -208,10 +214,31 @@ export type RootSubscriptionIntervalArgs = {
   n?: Scalars['Int'];
 };
 
+
+export type RootSubscriptionWatchMessagesArgs = {
+  chat: Scalars['String'];
+};
+
+export enum SubscriptionChange {
+  Delete = 'DELETE',
+  New = 'NEW',
+  Update = 'UPDATE'
+}
+
+export type User = {
+  __typename?: 'User';
+  age?: Maybe<Scalars['Int']>;
+  gender?: Maybe<Gender>;
+  id?: Maybe<Scalars['String']>;
+  mail?: Maybe<Scalars['String']>;
+  nameDisplay?: Maybe<Scalars['String']>;
+  nameUser?: Maybe<Scalars['String']>;
+};
+
 export type SessionQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type SessionQuery = { __typename?: 'RootQuery', session: { __typename?: 'QuerySession', user?: { __typename?: 'OutputUser', id: string, nameUser?: string | null, nameDisplay?: string | null, gender?: Gender | null } | null } };
+export type SessionQuery = { __typename?: 'RootQuery', session: { __typename?: 'QuerySession', user?: { __typename?: 'User', id?: string | null, nameUser?: string | null, nameDisplay?: string | null, gender?: Gender | null } | null } };
 
 export type GetChatsQueryVariables = Exact<{
   first?: InputMaybe<Scalars['Int']>;
@@ -219,7 +246,7 @@ export type GetChatsQueryVariables = Exact<{
 }>;
 
 
-export type GetChatsQuery = { __typename?: 'RootQuery', chat: { __typename?: 'QueryChat', getChats: { __typename?: 'OutputChatConnection', pageInfo: { __typename?: 'PageInfo', hasPreviousPage: boolean, hasNextPage: boolean, startCursor?: string | null, endCursor?: string | null }, edges: Array<{ __typename?: 'OutputChatEdge', cursor: string, node: { __typename?: 'OutputChat', id: string, owner?: string | null, users?: Array<string> | null, chatType?: ChatType | null, name?: string | null } }> } } };
+export type GetChatsQuery = { __typename?: 'RootQuery', chat: { __typename?: 'QueryChat', getChats: { __typename?: 'ChatConnection', pageInfo: { __typename?: 'PageInfo', hasPreviousPage: boolean, hasNextPage: boolean, startCursor?: string | null, endCursor?: string | null }, edges: Array<{ __typename?: 'ChatEdge', cursor: string, node: { __typename?: 'Chat', id?: string | null, owner?: string | null, users?: Array<string> | null, chatType?: ChatType | null, name?: string | null } }> } } };
 
 export type GetMessagesQueryVariables = Exact<{
   chat: Scalars['String'];
@@ -228,7 +255,7 @@ export type GetMessagesQueryVariables = Exact<{
 }>;
 
 
-export type GetMessagesQuery = { __typename?: 'RootQuery', chat: { __typename?: 'QueryChat', getMessages: { __typename?: 'OutputChatMessageConnection', pageInfo: { __typename?: 'PageInfo', hasPreviousPage: boolean, hasNextPage: boolean, startCursor?: string | null, endCursor?: string | null }, edges: Array<{ __typename?: 'OutputChatMessageEdge', cursor: string, node: { __typename?: 'OutputChatMessage', id: string, chat?: string | null, user?: string | null, edit?: number | null, message?: string | null } }> } } };
+export type GetMessagesQuery = { __typename?: 'RootQuery', chat: { __typename?: 'QueryChat', getMessages: { __typename?: 'ChatMessageConnection', pageInfo: { __typename?: 'PageInfo', hasPreviousPage: boolean, hasNextPage: boolean, startCursor?: string | null, endCursor?: string | null }, edges: Array<{ __typename?: 'ChatMessageEdge', cursor: string, node: { __typename?: 'ChatMessage', id?: string | null, chat?: string | null, user?: string | null, edit?: number | null, message?: string | null } }> } } };
 
 export type FindUserQueryVariables = Exact<{
   nameUser: Scalars['String'];
@@ -236,14 +263,14 @@ export type FindUserQueryVariables = Exact<{
 }>;
 
 
-export type FindUserQuery = { __typename?: 'RootQuery', session: { __typename?: 'QuerySession', findUser: Array<{ __typename?: 'OutputUser', id: string, nameUser?: string | null, nameDisplay?: string | null, gender?: Gender | null, mail?: string | null, age?: number | null }> } };
+export type FindUserQuery = { __typename?: 'RootQuery', session: { __typename?: 'QuerySession', findUser: Array<{ __typename?: 'User', id?: string | null, nameUser?: string | null, nameDisplay?: string | null, gender?: Gender | null, mail?: string | null, age?: number | null }> } };
 
 export type GetUserQueryVariables = Exact<{
   id: Scalars['String'];
 }>;
 
 
-export type GetUserQuery = { __typename?: 'RootQuery', session: { __typename?: 'QuerySession', getUser: { __typename?: 'OutputUser', id: string, nameUser?: string | null, nameDisplay?: string | null, gender?: Gender | null, mail?: string | null, age?: number | null } } };
+export type GetUserQuery = { __typename?: 'RootQuery', session: { __typename?: 'QuerySession', getUser: { __typename?: 'User', id?: string | null, nameUser?: string | null, nameDisplay?: string | null, gender?: Gender | null, mail?: string | null, age?: number | null } } };
 
 export type LogInQueryVariables = Exact<{
   nameUser: Scalars['String'];
@@ -251,7 +278,7 @@ export type LogInQueryVariables = Exact<{
 }>;
 
 
-export type LogInQuery = { __typename?: 'RootQuery', session: { __typename?: 'QuerySession', logIn: { __typename?: 'OutputUser', id: string, nameUser?: string | null, nameDisplay?: string | null, gender?: Gender | null } } };
+export type LogInQuery = { __typename?: 'RootQuery', session: { __typename?: 'QuerySession', logIn: { __typename?: 'User', id?: string | null, nameUser?: string | null, nameDisplay?: string | null, gender?: Gender | null } } };
 
 export type RegisterQueryVariables = Exact<{
   nameUser: Scalars['String'];
@@ -259,7 +286,7 @@ export type RegisterQueryVariables = Exact<{
 }>;
 
 
-export type RegisterQuery = { __typename?: 'RootQuery', session: { __typename?: 'QuerySession', register: { __typename?: 'OutputUser', id: string, nameUser?: string | null, nameDisplay?: string | null, gender?: Gender | null } } };
+export type RegisterQuery = { __typename?: 'RootQuery', session: { __typename?: 'QuerySession', register: { __typename?: 'User', id?: string | null, nameUser?: string | null, nameDisplay?: string | null, gender?: Gender | null } } };
 
 export type LogOutQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -272,14 +299,21 @@ export type SendMessageQueryVariables = Exact<{
 }>;
 
 
-export type SendMessageQuery = { __typename?: 'RootQuery', chat: { __typename?: 'QueryChat', sendMessage?: { __typename?: 'OutputChatMessage', id: string, chat?: string | null, user?: string | null, edit?: number | null, message?: string | null } | null } };
+export type SendMessageQuery = { __typename?: 'RootQuery', chat: { __typename?: 'QueryChat', sendMessage?: { __typename?: 'ChatMessage', id?: string | null, chat?: string | null, user?: string | null, edit?: number | null, message?: string | null } | null } };
 
 export type CreateChatQueryVariables = Exact<{
   userId: Scalars['String'];
 }>;
 
 
-export type CreateChatQuery = { __typename?: 'RootQuery', chat: { __typename?: 'QueryChat', createPrivate?: { __typename?: 'OutputChat', id: string, owner?: string | null, users?: Array<string> | null, chatType?: ChatType | null, name?: string | null } | null } };
+export type CreateChatQuery = { __typename?: 'RootQuery', chat: { __typename?: 'QueryChat', createPrivate?: { __typename?: 'Chat', id?: string | null, owner?: string | null, users?: Array<string> | null, chatType?: ChatType | null, name?: string | null } | null } };
+
+export type MonitorChatSubscriptionVariables = Exact<{
+  chat: Scalars['String'];
+}>;
+
+
+export type MonitorChatSubscription = { __typename?: 'RootSubscription', watchMessages: { __typename?: 'ChatMessageChange', change: SubscriptionChange, message: { __typename?: 'ChatMessage', id?: string | null, user?: string | null, edit?: number | null, message?: string | null } } };
 
 
 export const SessionDocument = gql`
@@ -427,6 +461,19 @@ export const CreateChatDocument = gql`
   }
 }
     `;
+export const MonitorChatDocument = gql`
+    subscription MonitorChat($chat: String!) {
+  watchMessages(chat: $chat) {
+    change
+    message {
+      id
+      user
+      edit
+      message
+    }
+  }
+}
+    `;
 
 export type SdkFunctionWrapper = <T>(action: (requestHeaders?:Record<string, string>) => Promise<T>, operationName: string, operationType?: string) => Promise<T>;
 
@@ -464,6 +511,9 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
     },
     CreateChat(variables: CreateChatQueryVariables, requestHeaders?: Dom.RequestInit["headers"]): Promise<CreateChatQuery> {
       return withWrapper((wrappedRequestHeaders) => client.request<CreateChatQuery>(CreateChatDocument, variables, {...requestHeaders, ...wrappedRequestHeaders}), 'CreateChat', 'query');
+    },
+    MonitorChat(variables: MonitorChatSubscriptionVariables, requestHeaders?: Dom.RequestInit["headers"]): Promise<MonitorChatSubscription> {
+      return withWrapper((wrappedRequestHeaders) => client.request<MonitorChatSubscription>(MonitorChatDocument, variables, {...requestHeaders, ...wrappedRequestHeaders}), 'MonitorChat', 'subscription');
     }
   };
 }

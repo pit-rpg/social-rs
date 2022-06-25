@@ -4,6 +4,7 @@ pub mod context;
 pub mod routes;
 pub mod schema;
 pub mod utils;
+pub mod simple_broker;
 
 use async_graphql::{ObjectType, Schema, SubscriptionType};
 use std::result::Result;

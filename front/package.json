@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "watchALL": "gen:gql-sdk:watch & npm run dev:watch",
     "dev:build": "node -r ts-node/register cli.ts",
     "dev:watch": "node -r ts-node/register cli.ts --dev",
     "gen:gql-sdk": "graphql-codegen",

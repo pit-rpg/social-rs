@@ -1,32 +1,40 @@
-use crate::db::{utils::{CollectionUtils, date_now}};
-use async_graphql::{Enum};
-use mongodb::{bson::doc, options::IndexOptions, Collection, Database, IndexModel, bson::{oid::ObjectId}};
+use crate::db::utils::CollectionUtils;
+use async_graphql::Enum;
+use mongodb::{
+    bson::doc, bson::oid::ObjectId, options::IndexOptions, Collection, Database, IndexModel,
+};
 use serde::{Deserialize, Serialize};
 use validator::Validate;
+use std::collections::HashMap;
 
 #[derive(Debug, Serialize, Deserialize, Validate, Clone)]
 pub struct DBChat {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "_id")]
     pub id: Option<ObjectId>,
-
     pub owner: Option<ObjectId>,
-
     pub users: Vec<ObjectId>,
-
     pub chat_type: ChatType,
-
     pub name: Option<String>,
+    pub last_msg: Option<ObjectId>,
+    pub user_last_msg: HashMap<String, ObjectId>,
 }
 
 impl DBChat {
-    pub fn new(users: &[ObjectId], chat_type: ChatType, name: Option<String>, owner: Option<ObjectId>) -> Self {
+    pub fn new(
+        users: &[ObjectId],
+        chat_type: ChatType,
+        name: Option<String>,
+        owner: Option<ObjectId>,
+    ) -> Self {
         Self {
             id: None,
             users: users.into(),
             chat_type,
             owner,
             name,
+            last_msg: None,
+            user_last_msg: HashMap::new(),
         }
     }
 
@@ -50,13 +58,9 @@ pub struct DBChatMessage {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "_id")]
     pub id: Option<ObjectId>,
-
     pub chat: ObjectId,
-
     pub user: ObjectId,
-
     pub edit: Option<u64>,
-
     pub message: String,
 }
 
@@ -90,7 +94,6 @@ impl DBChatMessage {
     }
 }
 
-
 #[derive(Debug, Serialize, Deserialize, Clone, Enum, Copy, PartialEq, Eq)]
 pub enum ChatType {
     UserPrivate,
@@ -119,5 +122,3 @@ impl CollectionUtils<DBChatMessage> for DBChatMessage {
         "ChatMessage"
     }
 }
-
-

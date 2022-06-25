@@ -1,8 +1,11 @@
-use super::{models::{DBUser, DBChat, DBChatMessage}, RedisPool};
+use crate::db::models::{DBChat, DBChatMessage, DBUser};
 use deadpool::unmanaged::Pool;
 use mongodb::{options::ClientOptions, Client, Database};
 use num_cpus;
+use redis::Connection;
 use std::env;
+
+pub type RedisPool = Pool<Connection>;
 
 pub async fn init(redis_pull_size: Option<usize>) -> (RedisPool, Client, Database) {
     let (client, db) = connect_mongo().await;

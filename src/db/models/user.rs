@@ -1,5 +1,6 @@
-use crate::db::{utils::CollectionUtils, validations::validate_trimmed};
+use crate::db::{utils::CollectionUtils, validate_trimmed};
 use async_graphql::{Enum};
+
 use mongodb::{
     bson::doc, bson::oid::ObjectId, options::IndexOptions, Collection, Database,
     IndexModel,

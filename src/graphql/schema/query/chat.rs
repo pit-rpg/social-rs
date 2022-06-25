@@ -1,8 +1,9 @@
-use crate::controllers::{Chat, OutputChat, OutputChatMessage};
-use crate::graphql::utils::{get_user_id, GQLResult};
-use crate::db::utils::{map_string_to_id};
-use async_graphql::connection::Connection;
-use async_graphql::{Context, Object, Result};
+use crate::controllers::{ControllerChat};
+use crate::db::{DBChat, DBChatMessage};
+use crate::graphql::utils::{get_user_id};
+use crate::error::GQLResult;
+use async_graphql::connection::{Connection, EmptyFields};
+use async_graphql::{Context, Object};
 use mongodb::bson::oid::ObjectId;
 use mongodb::Database;
 use serde::{Deserialize, Serialize};
@@ -13,10 +14,10 @@ pub struct QueryChat;
 
 #[Object]
 impl QueryChat {
-    async fn create_user_private<'a>(&self, ctx: &'a Context<'_>) -> GQLResult<Option<OutputChat>> {
+    async fn create_user_private<'a>(&self, ctx: &'a Context<'_>) -> GQLResult<Option<DBChat>> {
         let id = get_user_id(ctx)?;
         let db = ctx.data::<Arc<Database>>().unwrap();
-        let chat = Chat::create_user_private(db, &id).await?;
+        let chat = ControllerChat::create_user_private(db, &id).await?;
 
         Ok(Some(chat))
     }
@@ -25,11 +26,11 @@ impl QueryChat {
         &self,
         ctx: &'a Context<'_>,
         user_id: String,
-    ) -> GQLResult<Option<OutputChat>> {
+    ) -> GQLResult<Option<DBChat>> {
         let id = get_user_id(ctx)?;
         let user_id: ObjectId = ObjectId::parse_str(&user_id)?;
         let db = ctx.data::<Arc<Database>>().unwrap();
-        let chat = Chat::create_private(db, &id, &user_id).await?;
+        let chat = ControllerChat::create_private(db, &id, &user_id).await?;
 
         Ok(Some(chat))
     }
@@ -39,16 +40,13 @@ impl QueryChat {
         ctx: &'a Context<'_>,
         after: Option<String>,
         before: Option<String>,
-        first: Option<i64>,
-    ) -> GQLResult<Connection<String, OutputChat>> {
-        let after = map_string_to_id(&after);
-        let before = map_string_to_id(&before);
+        first: Option<i32>,
+        last: Option<i32>,
+    ) -> GQLResult<Connection<String, DBChat, EmptyFields, EmptyFields>> {
         let id = get_user_id(ctx)?;
-
         let db = ctx.data::<Arc<Database>>().unwrap();
-        let chats = Chat::get_chats(db, &id, after, before, first).await?;
 
-        Ok(chats)
+        ControllerChat::get_chats(db, &id, after, before, last, first).await
     }
 
     async fn get_messages<'a>(
@@ -57,31 +55,27 @@ impl QueryChat {
         chat: String,
         after: Option<String>,
         before: Option<String>,
-        first: Option<i64>,
-    ) -> GQLResult<Connection<String, OutputChatMessage>> {
-        let after = map_string_to_id(&after);
-        let before = map_string_to_id(&before);
+        first: Option<i32>,
+        last: Option<i32>,
+    ) -> GQLResult<Connection<String, DBChatMessage, EmptyFields, EmptyFields>> {
         let chat = ObjectId::parse_str(chat)?;
         let id = get_user_id(ctx)?;
-
         let db = ctx.data::<Arc<Database>>().unwrap();
-        let messages = Chat::get_messages(db, &id, chat, after, before, first).await?;
 
-        Ok(messages)
+        ControllerChat::get_messages(db, &id, chat, after, before, last, first).await
     }
-
 
     async fn send_message<'a>(
         &self,
         ctx: &'a Context<'_>,
         chat: String,
         message: String,
-    ) -> GQLResult<Option<OutputChatMessage>> {
+    ) -> GQLResult<Option<DBChatMessage>> {
         let chat = ObjectId::parse_str(chat)?;
         let id = get_user_id(ctx)?;
 
         let db = ctx.data::<Arc<Database>>().unwrap();
-        let message = Chat::send_message(db, id, chat, message).await?;
+        let message = ControllerChat::send_message(db, id, chat, message).await?;
 
         Ok(Some(message))
     }
@@ -102,21 +96,17 @@ impl QueryChat {
         let id = get_user_id(ctx)?;
 
         let db = ctx.data::<Arc<Database>>().unwrap();
-        let res = Chat::remove_messages(db, id, chat, messages).await?;
+        let res = ControllerChat::remove_messages(db, id, chat, messages).await?;
 
         Ok(Some(res))
     }
 
-    async fn remove_chat<'a>(
-        &self,
-        ctx: &'a Context<'_>,
-        chat: String,
-    ) -> GQLResult<Option<bool>> {
+    async fn remove_chat<'a>(&self, ctx: &'a Context<'_>, chat: String) -> GQLResult<Option<bool>> {
         let chat = ObjectId::parse_str(chat)?;
         let id = get_user_id(ctx)?;
 
         let db = ctx.data::<Arc<Database>>().unwrap();
-        let res = Chat::remove_chat(db, id, chat).await?;
+        let res = ControllerChat::remove_chat(db, id, chat).await?;
 
         Ok(Some(res))
     }

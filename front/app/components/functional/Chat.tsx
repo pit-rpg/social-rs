@@ -1,13 +1,8 @@
-import {useStore} from 'app/store';
 import React, {FunctionComponent} from 'react';
-import {InputText, Button} from 'app/components/basic';
-import {ChatInput, ItemChatMessage, ChatMessages} from 'app/components/functional';
+import {ChatInput, ChatMessages} from 'app/components/functional';
 import {controllerChats} from 'app/controllers';
-import {serverData} from 'app/serverData';
-import {OutputChat} from 'app/graphQL/generated_sdk';
 import {MainRoutes} from 'app/components/pages/MainRoutes';
 import {Link} from "react-router-dom";
-import {} from 'app/controllers';
 
 export type PropsChat = {
     chatId: string,

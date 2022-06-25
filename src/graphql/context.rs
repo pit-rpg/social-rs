@@ -1,7 +1,6 @@
 use std::sync::{Arc, Mutex, MutexGuard};
 use mongodb::{bson::oid::ObjectId};
-use async_graphql::{Result};
-use crate::db::utils::map_string_to_id;
+use crate::db::map_string_to_id;
 
 #[derive(Clone, Debug, Default)]
 pub struct ContextData {

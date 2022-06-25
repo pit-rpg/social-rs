@@ -34,7 +34,7 @@ async fn main() -> std::io::Result<()> {
     std::env::set_var("RUST_LOG", "actix_web=info");
     env_logger::init();
 
-    let (pool_redis_connection, _client_mongo, db_mongo) = db::connect::init(None).await;
+    let (pool_redis_connection, _client_mongo, db_mongo) = db::init(None).await;
     let schema = graphql::schema::get_schema();
 
     graphql::dump_schema_to_disk(&schema).await?;
@@ -68,13 +68,13 @@ async fn main() -> std::io::Result<()> {
                 secret_key.clone(),
             ))
             .app_data(web::Data::new(schema.clone()))
-            .service(web::resource("/graphql").to(graphql::routes::graphql))
             .service(
-                web::resource("/ws")
+                web::resource("/graphql")
                     .guard(actix_web::guard::Get())
                     .guard(actix_web::guard::Header("upgrade", "websocket"))
                     .to(graphql::routes::graphql_ws),
             )
+            .service(web::resource("/graphql").to(graphql::routes::graphql))
             .service(web::resource("/pg").to(graphql::routes::gql_playground))
             .service(
                 fs::Files::new("/", "dist")

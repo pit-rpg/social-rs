@@ -1,7 +1,7 @@
-import {OutputUser, OutputChat, OutputChatMessage} from 'app/graphQL/generated_sdk';
+import {User, Chat, ChatMessage} from 'app/graphQL/generated_sdk';
 
 export type DefaultData = {
-    me: OutputUser | null | undefined;
+    me: User | null | undefined;
 
     'login:user': string;
     'login:pass': string;
@@ -9,13 +9,13 @@ export type DefaultData = {
     'login:tab': 'login' | 'register';
 
     // 'chats:chatsResponse': Chat[];
-    'chats:chats': OutputChat[];
+    'chats:chats': Chat[];
     'chats:messageInput': string;
-    'chats:messages': OutputChatMessage[];
+    'chats:messages': ChatMessage[];
 
     'contacts:searchInput': string;
-    'contacts:searchResult': OutputUser[];
-    'contacts:user'?: OutputUser,
+    'contacts:searchResult': User[];
+    'contacts:user'?: User,
 };
 
 export type DefaultDataKeys = keyof DefaultData;

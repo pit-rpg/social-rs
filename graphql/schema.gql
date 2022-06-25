@@ -1,4 +1,85 @@
 
+type Chat {
+	id: String
+	owner: String
+	users: [String!]
+	chatType: ChatType
+	name: String
+	lastMsg: String
+	userLastMsg: JSONObject
+}
+
+type ChatConnection {
+	"""
+	Information to aid in pagination.
+	"""
+	pageInfo: PageInfo!
+	"""
+	A list of edges.
+	"""
+	edges: [ChatEdge!]!
+	"""
+	A list of nodes.
+	"""
+	nodes: [Chat!]!
+}
+
+"""
+An edge in a connection.
+"""
+type ChatEdge {
+	"""
+	A cursor for use in pagination
+	"""
+	cursor: String!
+	"""
+	The item at the end of the edge
+	"""
+	node: Chat!
+}
+
+type ChatMessage {
+	id: String
+	chat: String
+	user: String
+	edit: Int
+	message: String
+}
+
+type ChatMessageChange {
+	change: SubscriptionChange!
+	message: ChatMessage!
+}
+
+type ChatMessageConnection {
+	"""
+	Information to aid in pagination.
+	"""
+	pageInfo: PageInfo!
+	"""
+	A list of edges.
+	"""
+	edges: [ChatMessageEdge!]!
+	"""
+	A list of nodes.
+	"""
+	nodes: [ChatMessage!]!
+}
+
+"""
+An edge in a connection.
+"""
+type ChatMessageEdge {
+	"""
+	A cursor for use in pagination
+	"""
+	cursor: String!
+	"""
+	The item at the end of the edge
+	"""
+	node: ChatMessage!
+}
+
 enum ChatType {
 	USER_PRIVATE
 	PRIVATE
@@ -25,80 +106,10 @@ input InputUserLogin {
 }
 
 
-type OutputChat {
-	id: String!
-	owner: String
-	users: [String!]
-	chatType: ChatType
-	name: String
-}
-
-type OutputChatConnection {
-	"""
-	Information to aid in pagination.
-	"""
-	pageInfo: PageInfo!
-	"""
-	A list of edges.
-	"""
-	edges: [OutputChatEdge!]!
-}
-
 """
-An edge in a connection.
+A scalar that can represent any JSON Object value.
 """
-type OutputChatEdge {
-	"""
-	A cursor for use in pagination
-	"""
-	cursor: String!
-	"""
-	The item at the end of the edge
-	"""
-	node: OutputChat!
-}
-
-type OutputChatMessage {
-	id: String!
-	chat: String
-	user: String
-	edit: Int
-	message: String
-}
-
-type OutputChatMessageConnection {
-	"""
-	Information to aid in pagination.
-	"""
-	pageInfo: PageInfo!
-	"""
-	A list of edges.
-	"""
-	edges: [OutputChatMessageEdge!]!
-}
-
-"""
-An edge in a connection.
-"""
-type OutputChatMessageEdge {
-	"""
-	A cursor for use in pagination
-	"""
-	cursor: String!
-	"""
-	The item at the end of the edge
-	"""
-	node: OutputChatMessage!
-}
-
-type OutputUser {
-	id: String!
-	nameUser: String
-	nameDisplay: String
-	gender: Gender
-	mail: String
-	age: Int
-}
+scalar JSONObject
 
 """
 Information about pagination in a connection
@@ -123,21 +134,21 @@ type PageInfo {
 }
 
 type QueryChat {
-	createUserPrivate: OutputChat
-	createPrivate(userId: String!): OutputChat
-	getChats(after: String, before: String, first: Int): OutputChatConnection!
-	getMessages(chat: String!, after: String, before: String, first: Int): OutputChatMessageConnection!
-	sendMessage(chat: String!, message: String!): OutputChatMessage
+	createUserPrivate: Chat
+	createPrivate(userId: String!): Chat
+	getChats(after: String, before: String, first: Int, last: Int): ChatConnection!
+	getMessages(chat: String!, after: String, before: String, first: Int, last: Int): ChatMessageConnection!
+	sendMessage(chat: String!, message: String!): ChatMessage
 	removeMessages(chat: String!, messages: [String!]!): Boolean
 	removeChat(chat: String!): Boolean
 }
 
 type QuerySession {
-	user: OutputUser
-	findUser(data: InputFindUser!): [OutputUser!]!
-	getUser(id: String!): OutputUser!
-	register(data: InputUserLogin!): OutputUser!
-	logIn(data: InputUserLogin!): OutputUser!
+	user: User
+	findUser(data: InputFindUser!): [User!]!
+	getUser(id: String!): User!
+	register(data: InputUserLogin!): User!
+	logIn(data: InputUserLogin!): User!
 	logOut: Boolean!
 }
 
@@ -147,10 +158,25 @@ type RootQuery {
 }
 
 type RootSubscription {
-	values: Int!
+	watchMessages(chat: String!): ChatMessageChange!
 	interval(n: Int! = 1): Int!
 }
 
+
+enum SubscriptionChange {
+	NEW
+	DELETE
+	UPDATE
+}
+
+type User {
+	id: String
+	nameUser: String
+	nameDisplay: String
+	gender: Gender
+	mail: String
+	age: Int
+}
 
 schema {
 	query: RootQuery

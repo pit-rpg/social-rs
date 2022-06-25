@@ -97,6 +97,10 @@ export function getConfig (options: ConfigOptions) {
                     target: 'http://localhost:3000',
                     ws: true,
                 },
+                // '/ws': {
+                //     target: 'http://localhost:3000',
+                //     ws: true,
+                // },
             }
         }
     };

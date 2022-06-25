@@ -163,6 +163,17 @@ export const mutationCreateChat = gql`
   }
 `;
 
+
+export const subscriptionMonitorChat = gql`subscription MonitorChat($chat: String!) {
+    watchMessages(chat: $chat) {
+      change, message {
+        id, user, edit, message
+      }
+    }
+}`;
+
+
+
 // export const SubscriptionCountToNumber = gql`
 //   subscription CountToNumber($count: Int) {
 //     countToNumber(count: $count)

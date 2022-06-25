@@ -15,7 +15,7 @@ pub async fn gql_playground() -> HttpResponse {
     HttpResponse::Ok()
         .content_type("text/html; charset=utf-8")
         .body(playground_source(
-            GraphQLPlaygroundConfig::new("/").subscription_endpoint("/ws"),
+            GraphQLPlaygroundConfig::new("/graphql").subscription_endpoint("/graphql"),
         ))
 }
 
